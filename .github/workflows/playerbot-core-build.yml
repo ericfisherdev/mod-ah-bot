@@ -1,0 +1,56 @@
+name: playerbot-core-build
+
+# Builds the module inside the core the ericfisherdev server runs:
+# mod-playerbots/azerothcore-wotlk, branch Playerbot. core-build.yml builds
+# against upstream azerothcore-wotlk master instead, which can hide breakage
+# that only shows up on the Playerbot core.
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Same runner and compiler as the Playerbot core's own module build
+          # (core_modules_build.yml).
+          - os: ubuntu-24.04
+            compiler:
+              CC: clang-18
+              CXX: clang++-18
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }}-${{ matrix.compiler.CC }}-playerbot-core
+    steps:
+      - name: Checkout Playerbot core
+        uses: actions/checkout@v4
+        with:
+          repository: 'mod-playerbots/azerothcore-wotlk'
+          ref: 'Playerbot'
+          submodules: 'recursive'
+      - name: Checkout module
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          path: 'modules/${{ github.event.repository.name }}'
+      # The core's composite action: configure with -Werror, build, install,
+      # then dry-run authserver and worldserver with the module loaded.
+      - uses: ./.github/actions/linux-build
+        with:
+          CC: ${{ matrix.compiler.CC }}
+          CXX: ${{ matrix.compiler.CXX }}
+          modules: true
+          pch: false
+          maxerrors: 0
+          keepgoing: true
