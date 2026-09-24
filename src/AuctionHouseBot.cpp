@@ -250,8 +250,14 @@ void AuctionHouseBot::Buy(Player* AHBplayer, AHBConfig* config, WorldSession* se
             return;
         }
 
+        //
+        // Pick a random candidate. Always taking the first (lowest) id let a single
+        // auction priced above the buy limit block the buyer on every interval
+        // until it expired.
+        //
+
         std::set<uint32>::iterator it = auctionsGuidsToConsider.begin();
-        std::advance(it, 0);
+        std::advance(it, urand(0, static_cast<uint32>(auctionsGuidsToConsider.size()) - 1));
         uint32 auctionID = *it;
         AuctionEntry* auction = auctionHouseObject->GetAuction(auctionID);
         
