@@ -56,6 +56,42 @@ jobs:
           grep -q -- '-DBUILD_TESTING="ON"' "$action"
           sed -i 's/-DBUILD_TESTING="ON"/-DBUILD_TESTING="OFF"/' "$action"
           grep -q -- '-DBUILD_TESTING="OFF"' "$action"
+      # The Playerbot core loads the DB override tables charsections_dbc and
+      # emotetextsound_dbc, but no SQL on that branch creates them, so the
+      # worldserver dry run aborts on a fresh database. Queue them as a
+      # pending update; linux-build's "Process pending sql" step imports it.
+      # Definitions follow upstream azerothcore-wotlk 2026_09_21_05.sql.
+      - name: Add missing DBC override tables
+        shell: bash
+        run: |
+          pending=data/sql/updates/pending_db_world
+          mkdir -p "$pending"
+          cat > "$pending/ci_missing_dbc_override_tables.sql" <<'SQL'
+          CREATE TABLE IF NOT EXISTS `charsections_dbc` (
+            `ID` int NOT NULL DEFAULT '0',
+            `RaceID` int NOT NULL DEFAULT '0',
+            `SexID` int NOT NULL DEFAULT '0',
+            `BaseSection` int NOT NULL DEFAULT '0',
+            `TextureName_1` varchar(100) DEFAULT NULL,
+            `TextureName_2` varchar(100) DEFAULT NULL,
+            `TextureName_3` varchar(100) DEFAULT NULL,
+            `Flags` int NOT NULL DEFAULT '0',
+            `VariationIndex` int NOT NULL DEFAULT '0',
+            `ColorIndex` int NOT NULL DEFAULT '0',
+            PRIMARY KEY (`ID`)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            COLLATE=utf8mb4_unicode_ci;
+
+          CREATE TABLE IF NOT EXISTS `emotetextsound_dbc` (
+            `ID` int NOT NULL DEFAULT '0',
+            `EmotesTextID` int NOT NULL DEFAULT '0',
+            `RaceID` int NOT NULL DEFAULT '0',
+            `SexID` int NOT NULL DEFAULT '0',
+            `SoundID` int NOT NULL DEFAULT '0',
+            PRIMARY KEY (`ID`)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            COLLATE=utf8mb4_unicode_ci;
+          SQL
       # The core's composite action: configure with -Werror, build, install,
       # then dry-run authserver and worldserver with the module loaded.
       - uses: ./.github/actions/linux-build
