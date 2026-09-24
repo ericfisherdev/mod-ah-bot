@@ -44,6 +44,18 @@ jobs:
         with:
           submodules: 'recursive'
           path: 'modules/${{ github.event.repository.name }}'
+      # linux-build always configures with -DBUILD_TESTING=ON and has no
+      # input to turn it off. The core's unit tests cover the core, not
+      # this module, and on the Playerbot branch they do not compile
+      # (WorldMock lacks IWorld::AddQueryHolderCallback since f15ad9494).
+      # Switch them off; fail if the flag is no longer where we expect it.
+      - name: Disable core unit tests
+        shell: bash
+        run: |
+          action=.github/actions/linux-build/action.yml
+          grep -q -- '-DBUILD_TESTING="ON"' "$action"
+          sed -i 's/-DBUILD_TESTING="ON"/-DBUILD_TESTING="OFF"/' "$action"
+          grep -q -- '-DBUILD_TESTING="OFF"' "$action"
       # The core's composite action: configure with -Werror, build, install,
       # then dry-run authserver and worldserver with the module loaded.
       - uses: ./.github/actions/linux-build
