@@ -30,6 +30,8 @@ CMakeLists.txt.user
 nbproject/
 .sync.ffs_db
 *.kate-swp
+# Claude Code local settings and agent files
+.claude/
 
 #
 # Eclipse
